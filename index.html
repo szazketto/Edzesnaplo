@@ -179,17 +179,32 @@
     display:grid;grid-template-columns:22px 1fr 1fr 32px;gap:8px;align-items:center;margin-top:8px;
   }
   .set-idx{font-size:12px;color:var(--text-dim);text-align:center;font-weight:700;}
-  .set-row input{
+  .unit-input{
+    position:relative;min-width:0;
+  }
+  .unit-input input{
+    box-sizing:border-box;
     background:var(--card-2);
     border:1px solid var(--border);
     color:var(--text);
     border-radius:9px;
-    padding:9px 10px;
+    padding:9px 34px 9px 10px;
     font-size:14.5px;
     font-family:inherit;
     width:100%;
+    -webkit-appearance:none;
+    appearance:none;
   }
-  .set-row input:focus{outline:none;border-color:var(--accent);}
+  .unit-input input:focus{outline:none;border-color:var(--accent);}
+  .unit-suffix{
+    position:absolute;right:10px;top:50%;transform:translateY(-50%);
+    color:var(--text-dim);font-size:12.5px;font-weight:700;
+    pointer-events:none;
+  }
+  .unit-input input::-webkit-outer-spin-button,
+  .unit-input input::-webkit-inner-spin-button{
+    -webkit-appearance:none;margin:0;
+  }
   .set-del{
     border:none;background:rgba(242,100,122,.12);color:var(--danger);
     width:32px;height:32px;border-radius:9px;font-size:14px;cursor:pointer;
@@ -321,13 +336,6 @@
   }
   .toast.show{opacity:1;transform:translate(-50%,0);}
 </style>
-<link rel="manifest" href="./manifest.webmanifest">
-<link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png">
-<link rel="icon" type="image/png" sizes="32x32" href="./favicon-32.png">
-<meta name="theme-color" content="#12151a">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Edzésnapló">
 </head>
 <body>
 <div class="app">
@@ -701,11 +709,17 @@
     render();
   }
 
+  function numericInputValue(value){
+    if(value === undefined || value === null || value === "") return "";
+    var m = String(value).replace(",", ".").match(/-?\d+(?:\.\d+)?/);
+    return m ? m[0] : "";
+  }
+
   function setSetField(id, idx, field, value){
     if(!state.overrides[id]) state.overrides[id] = {sets:[]};
     if(!state.overrides[id].sets) state.overrides[id].sets = [];
     while(state.overrides[id].sets.length <= idx){ state.overrides[id].sets.push({weight:"", reps:""}); }
-    state.overrides[id].sets[idx][field] = value;
+    state.overrides[id].sets[idx][field] = numericInputValue(value);
     saveState();
   }
   function addSet(id){
@@ -728,8 +742,8 @@
   function formatSetsSummary(sets){
     if(!sets || !sets.length) return "Még nincs adat";
     return sets.map(function(s){
-      var w = s.weight ? s.weight : "–";
-      var r = s.reps ? s.reps : "–";
+      var w = s.weight ? numericInputValue(s.weight) + " kg" : "–";
+      var r = s.reps ? numericInputValue(s.reps) + " db" : "–";
       return w + " × " + r;
     }).join(" | ");
   }
@@ -738,10 +752,12 @@
     var ov = state.overrides[id];
     var sets = (ov && ov.sets && ov.sets.length) ? ov.sets : [{weight:"", reps:""}];
     var html = sets.map(function(s, idx){
+      var weightValue = numericInputValue(s.weight);
+      var repsValue = numericInputValue(s.reps);
       return '<div class="set-row">' +
         '<span class="set-idx">'+(idx+1)+'.</span>' +
-        '<input type="text" placeholder="Súly" data-set-field="weight" data-id="'+id+'" data-idx="'+idx+'" value="'+escapeHtml(s.weight||"")+'">' +
-        '<input type="text" placeholder="Ismétlés" data-set-field="reps" data-id="'+id+'" data-idx="'+idx+'" value="'+escapeHtml(s.reps||"")+'">' +
+        '<div class="unit-input"><input type="number" inputmode="decimal" step="0.1" min="0" placeholder="Súly" data-set-field="weight" data-id="'+id+'" data-idx="'+idx+'" value="'+escapeHtml(weightValue)+'"><span class="unit-suffix">kg</span></div>' +
+        '<div class="unit-input"><input type="number" inputmode="numeric" step="1" min="0" placeholder="Ismétlés" data-set-field="reps" data-id="'+id+'" data-idx="'+idx+'" value="'+escapeHtml(repsValue)+'"><span class="unit-suffix">db</span></div>' +
         (sets.length>1 ? '<button type="button" class="set-del" data-set-del="'+id+'" data-idx="'+idx+'">✕</button>' : '<span class="set-del-placeholder"></span>') +
       '</div>';
     }).join("");
@@ -1143,6 +1159,5 @@
   flushPendingSync();
 })();
 </script>
-<script>if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js"));}</script>
 </body>
 </html>
